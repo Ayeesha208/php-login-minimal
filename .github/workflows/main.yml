@@ -3,7 +3,7 @@ name: PHP App CI/CD for Azure VM
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
   build-deploy:
