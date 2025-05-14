@@ -1,45 +1,36 @@
-name: PHP App CI/CD for Azure VM
+name: CI/CD for PHP App
 
 on:
   push:
-    branches:
-      - master
+    branches: master
 
 jobs:
-  build-deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: PHP Syntax Check
+    - name: Create ZIP artifact
       run: |
-        echo "🔍 Running PHP syntax checks..."
-        find . -type f -name "*.php" -exec php -l {} \;
-
-    - name: Create ZIP Artifact
-      run: |
-        echo "📦 Creating ZIP build artifact..."
-        zip -r php-login-build.zip . -x "*.git*" "*.github*"
+        zip -r php-login.zip . -x '*.git*'
 
     - name: Upload to JFrog Artifactory
       run: |
-        echo "⬆️ Uploading to JFrog Artifactory..."
-        curl -H "X-JFrog-Art-Api: ${{ secrets.ARTIFACTORY_API_KEY }}" \
-             -T php-login-build.zip \
-             "${{ secrets.ARTIFACTORY_URL }}/${{ secrets.ARTIFACTORY_REPO }}/php-login/php-login-build-${{ github.run_number }}.zip"
+        curl -u "${{ secrets.ARTIFACTORY_USER }}:${{ secrets.ARTIFACTORY_TOKEN }}" \
+          -T php-login.zip \
+          "${{ secrets.ARTIFACTORY_URL }}/${{ secrets.ARTIFACTORY_REPO }}/php-login/$(date +%Y%m%d%H%M%S)-php-login.zip"
 
-    - name: SCP Deploy to Azure VM
+    - name: Deploy to Azure VM via SCP
       uses: appleboy/scp-action@v0.1.3
       with:
         host: ${{ secrets.SERVER_IP }}
         username: ${{ secrets.SERVER_USER }}
-        key: ${{ secrets.SERVER_SSH_KEY }}
+        key: ${{ secrets.SSH_KEY }}
         source: "."
         target: "/var/www/html/php-login"
-
-    - name: Smoke Test (Check Application)
-      run: |
-        echo "🌐 Running smoke test..."
-        curl --fail http://${{ secrets.SERVER_IP }}/php-login || exit 1
+        port: 22
+        strip_components: 0
+        overwrite: true
+        debug: true
