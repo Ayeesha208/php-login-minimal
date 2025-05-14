@@ -39,28 +39,40 @@ jobs:
         source: "php-login-build.zip"
         target: "~/"
 
-    - name: SSH Deploy ZIP to Web Directory
+    - name: SSH Deploy ZIP to Web Directory with Apache Setup
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.SERVER_IP }}
         username: ${{ secrets.SERVER_USER }}
         key: ${{ secrets.SERVER_SSH_KEY }}
         script: |
+          echo "🛠️ Installing Apache if not present..."
+          if ! command -v apache2 > /dev/null; then
+            sudo apt update
+            sudo apt install apache2 -y
+          fi
+          
+          echo "🔄 Restarting Apache..."
+          sudo systemctl enable apache2
+          sudo systemctl restart apache2
+
           echo "📂 Creating deployment directory..."
           sudo mkdir -p /var/www/html/php-login
+
           echo "📦 Unzipping build artifact..."
           sudo unzip -o ~/php-login-build.zip -d /var/www/html/php-login
-          echo "🧼 Setting permissions..."
-          sudo chown -R www-data:www-data /var/www/html/php-login
-          echo "🌐 Ensuring Apache is running..."
-          sudo systemctl restart apache2 || sudo systemctl restart httpd
-          echo "🧹 Cleaning up temp ZIP..."
-          rm ~/php-login-build.zip
-          echo "✅ Deployment complete."
 
-    - name: Wait for web server to start
+          echo "🔒 Setting permissions..."
+          sudo chown -R www-data:www-data /var/www/html/php-login
+
+          echo "🧹 Cleaning up..."
+          rm ~/php-login-build.zip
+
+          echo "✅ Apache is up and deployment completed."
+
+    - name: Wait for Apache to start
       run: |
-        echo "⏳ Waiting 10 seconds for web server to stabilize..."
+        echo "⏳ Waiting for web server to stabilize..."
         sleep 10
 
     - name: Smoke Test (Check Application)
