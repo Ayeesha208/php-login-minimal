@@ -30,6 +30,7 @@ jobs:
              -T php-login-build.zip \
              "${{ secrets.ARTIFACTORY_URL }}/${{ secrets.ARTIFACTORY_REPO }}/php-login/php-login-build-${{ github.run_number }}.zip"
 
+
     - name: SCP ZIP to Azure VM (Temp)
       uses: appleboy/scp-action@v0.1.3
       with:
