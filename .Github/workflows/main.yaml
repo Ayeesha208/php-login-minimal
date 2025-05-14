@@ -1,0 +1,45 @@
+name: PHP App CI/CD for Azure VM
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: PHP Syntax Check
+      run: |
+        echo "🔍 Running PHP syntax checks..."
+        find . -type f -name "*.php" -exec php -l {} \;
+
+    - name: Create ZIP Artifact
+      run: |
+        echo "📦 Creating ZIP build artifact..."
+        zip -r php-login-build.zip . -x "*.git*" "*.github*"
+
+    - name: Upload to JFrog Artifactory
+      run: |
+        echo "⬆️ Uploading to JFrog Artifactory..."
+        curl -H "X-JFrog-Art-Api: ${{ secrets.ARTIFACTORY_API_KEY }}" \
+             -T php-login-build.zip \
+             "${{ secrets.ARTIFACTORY_URL }}/${{ secrets.ARTIFACTORY_REPO }}/php-login/php-login-build-${{ github.run_number }}.zip"
+
+    - name: SCP Deploy to Azure VM
+      uses: appleboy/scp-action@v0.1.3
+      with:
+        host: ${{ secrets.SERVER_IP }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        source: "."
+        target: "/var/www/html/php-login"
+
+    - name: Smoke Test (Check Application)
+      run: |
+        echo "🌐 Running smoke test..."
+        curl --fail http://${{ secrets.SERVER_IP }}/php-login || exit 1
