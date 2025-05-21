@@ -18,6 +18,7 @@ jobs:
         echo "🔍 Running PHP syntax checks..."
         find . -type f -name "*.php" -exec php -l {} \;
 
+
     - name: Create ZIP Artifact
       run: |
         echo "📦 Creating ZIP build artifact..."
